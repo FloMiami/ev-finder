@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Finder — daily +EV plays</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 24px; background: #0f1115; color: #e8e8e8; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #9aa0a6; font-size: 14px; margin-bottom: 16px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .badge.demo { background: #5b3b00; color: #ffb74d; }
+  .badge.live { background: #0b3d1e; color: #4ade80; }
+  .badge.solid { background: #14532d; color: #4ade80; }
+  .badge.thin { background: #422006; color: #fbbf24; }
+  .note { background: #1a1d24; border: 1px solid #2a2e37; border-radius: 8px; padding: 12px 16px; font-size: 14px; line-height: 1.5; margin: 16px 0; }
+  .note b { color: #fff; }
+  .filters button { margin-right: 8px; padding: 6px 14px; border-radius: 999px; background: #1a1d24; color: #e8e8e8; font-size: 14px; border: 1px solid #2a2e37; cursor: pointer; }
+  .filters button.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #2a2e37; }
+  th { color: #9aa0a6; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  .empty { color: #9aa0a6; padding: 24px 0; }
+  .err { background: #3b0d0d; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 14px; }
+  footer { color: #6b7280; font-size: 12px; margin-top: 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Header: title, LIVE or DEMO badge, last update, credit balance. Filled in by the script below. -->
+  <h1>EV Finder <span class="badge demo" id="mode-badge">…</span></h1>
+  <div class="sub" id="subtitle">Loading…</div>
+
+  <div class="err" id="error-box" style="display:none"></div>
+
+  <!-- Plain-language explainer: how the edge is found and what it assumes. -->
+  <div class="note">
+    <b>How it works, in plain language:</b> for every game line and prop, the program takes every
+    book&rsquo;s price, strips out the book&rsquo;s built-in margin, and finds the middle (median) fair
+    price across all the books. When one book&rsquo;s price is better than that fair price by at
+    least 3%, it shows up here.
+    <b>Edge</b> is how far the book&rsquo;s price sits from the fair price.
+    <b>EV</b> is the expected profit per $1 staked if the consensus is right.
+    <b>SOLID</b> means a 5%+ edge; <b>THIN</b> means 3&ndash;5% — real, but inside the noise.
+    The assumption every play rests on: the consensus is right. If the consensus is wrong,
+    the edge is wrong, and a single prop can miss by a wide margin even when the math is
+    right on average. This never places a bet for you.
+  </div>
+
+  <!-- Sport filters. They only hide rows, they never fetch new data. -->
+  <div class="filters" id="filters">
+    <button data-sport="all" class="active">All</button>
+    <button data-sport="basketball_nba">NBA</button>
+    <button data-sport="basketball_ncaab">NCAAB</button>
+    <button data-sport="americanfootball_nfl">NFL</button>
+  </div>
+
+  <!-- The plays table. Rows are built by the script from plays.json. -->
+  <div id="table-wrap"></div>
+
+  <footer id="footer">
+    Data refreshes once a day at 6:00 AM CT. A fresh run can also be started by hand
+    from the repo&rsquo;s Actions tab (workflow: Daily EV scan).
+    <br>Method: consensus fair price across books (median, vig removed). Same approach
+    Optimal uses — Covers and Optimal have no public API, so this program does not call
+    them directly.
+  </footer>
+</div>
+
+<script>
+// The whole page is static. All it does is read plays.json (written by the
+// scheduled scan) and build the table from it. No key lives in this file.
+
+let allPlays = [];
+let minEdge = 0.03;
+
+// American price with the plus sign kept: +150 stays +150.
+function fmtPrice(price) {
+  return price > 0 ? "+" + price : String(price);
+}
+
+// Build one table row for a play.
+function rowHtml(p) {
+  return "<tr>"
+    + "<td>" + p.sport_title + "</td>"
+    + "<td>" + p.event + "</td>"
+    + "<td>" + p.market + "</td>"
+    + "<td><b>" + p.outcome + "</b></td>"
+    + "<td>" + p.book + "</td>"
+    + "<td class=\"num\">" + fmtPrice(p.book_price) + "</td>"
+    + "<td class=\"num\">" + fmtPrice(p.fair_price) + "</td>"
+    + "<td class=\"num\">+" + p.edge_pp + "%</td>"
+    + "<td class=\"num\">+" + p.ev_pct + "%</td>"
+    + "<td><span class=\"badge " + p.tag.toLowerCase() + "\">" + p.tag + "</span></td>"
+    + "</tr>";
+}
+
+// Draw the table for the chosen sport filter.
+function render(sport) {
+  const plays = allPlays.filter(p => sport === "all" || p.sport === sport);
+  const wrap = document.getElementById("table-wrap");
+  if (!plays.length) {
+    wrap.innerHTML = "<div class=\"empty\">No plays above the "
+      + Math.round(minEdge * 100) + "% edge threshold in this scan. Check back after the next daily run.</div>";
+    return;
+  }
+  let html = "<table><tr><th>Sport</th><th>Game</th><th>Market</th><th>Play</th><th>Book</th>"
+    + "<th class=\"num\">Book price</th><th class=\"num\">Fair price</th>"
+    + "<th class=\"num\">Edge</th><th class=\"num\">EV</th><th>Tag</th></tr>";
+  plays.forEach(p => { html += rowHtml(p); });
+  html += "</table>";
+  wrap.innerHTML = html;
+}
+
+// Filter buttons: mark the clicked one active and re-draw the table.
+document.getElementById("filters").addEventListener("click", (e) => {
+  if (e.target.tagName !== "BUTTON") return;
+  document.querySelectorAll("#filters button").forEach(b => b.classList.remove("active"));
+  e.target.classList.add("active");
+  render(e.target.dataset.sport);
+});
+
+// Load the scan result and fill in the header, then draw the table.
+fetch("plays.json")
+  .then(r => { if (!r.ok) throw new Error("plays.json not found"); return r.json(); })
+  .then(data => {
+    allPlays = data.plays || [];
+    minEdge = data.min_edge || 0.03;
+    const badge = document.getElementById("mode-badge");
+    badge.textContent = (data.mode || "demo").toUpperCase();
+    badge.className = "badge " + (data.mode || "demo");
+    let sub = "NBA &middot; Men&rsquo;s college basketball &middot; NFL &mdash; updated " + (data.updated || "never");
+    if (data.credits_remaining !== null && data.credits_remaining !== undefined) {
+      sub += " &middot; " + data.credits_remaining + " API credits left this month";
+    }
+    document.getElementById("subtitle").innerHTML = sub;
+    if (data.error) {
+      const box = document.getElementById("error-box");
+      box.style.display = "block";
+      box.textContent = "Heads up: " + data.error + " — showing what loaded.";
+    }
+    if (data.mode === "demo") {
+      document.getElementById("footer").innerHTML =
+        "DEMO DATA &mdash; these lines are made-up samples, not real odds. The first scheduled scan replaces them with live lines."
+        + "<br>" + document.getElementById("footer").innerHTML;
+    }
+    render("all");
+  })
+  .catch(() => {
+    document.getElementById("subtitle").textContent = "No scan has run yet — check back after the first scheduled run.";
+    document.getElementById("table-wrap").innerHTML =
+      "<div class=\"empty\">No plays file yet. The daily scan writes one every morning at 6:00 AM CT.</div>";
+  });
+</script>
+</body>
+</html>

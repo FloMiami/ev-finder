@@ -1,0 +1,69 @@
+# Daily EV scan: fetch live odds, find the +EV plays, publish them to
+# the GitHub Pages site (docs/plays.json).
+#
+# Runs once a day at 12:00 UTC (6:00 AM CST / 7:00 AM CDT) and on demand
+# from the repo's Actions tab (workflow_dispatch).
+#
+# Setup (once):
+#   1. Push this repo to GitHub as a PUBLIC repo (free GitHub Pages
+#      needs a public repo).
+#   2. Repo Settings -> Secrets and variables -> Actions -> New
+#      repository secret: ODDS_API_KEY = your key from the-odds-api.com.
+#      The key never appears in the code or the published page.
+#   3. Repo Settings -> Pages -> Source: Deploy from a branch ->
+#      Branch: main, Folder: /docs. The site is then live at
+#      https://<your-username>.github.io/<repo-name>/
+#
+# Credit budget (free tier, 500/month): one run costs about 15 credits
+# (9 for game lines + about 6 for 1 NBA prop event). Daily runs are
+# about 450/month, which fits the free 500. To scan more prop events,
+# raise PROP_EVENTS below — 3 events is about 810/month and does NOT
+# fit the free tier. The scan stops fetching props if the balance drops
+# below 50 credits, so it will not burn the whole month in one run.
+name: Daily EV scan
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repo so the script and the docs folder are present.
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      # Python 3.12, the version the scanner is written for.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The scanner only needs requests (odds_api.py uses it for HTTP).
+      - name: Install dependencies
+        run: pip install requests
+
+      # Run the scan. The key comes from the ODDS_API_KEY repository
+      # secret, never from the code. Writes docs/plays.json.
+      - name: Run the EV scan
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          MIN_EDGE: "0.03"
+          PROP_EVENTS: "1"
+          PROP_SPORTS: "basketball_nba"
+        run: python scan_static.py
+
+      # Commit the updated plays file, but only if it actually changed.
+      # The empty-commit check keeps the history clean on quiet days.
+      - name: Publish updated plays
+        run: |
+          git config user.name "ev-finder-bot"
+          git config user.email "ev-finder-bot@users.noreply.github.com"
+          git add docs/plays.json
+          git diff --cached --quiet || git commit -m "Update +EV plays"
+          git push

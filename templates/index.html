@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Finder — daily +EV plays</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 24px; background: #0f1115; color: #e8e8e8; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #9aa0a6; font-size: 14px; margin-bottom: 16px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .badge.demo { background: #5b3b00; color: #ffb74d; }
+  .badge.live { background: #0b3d1e; color: #4ade80; }
+  .badge.solid { background: #14532d; color: #4ade80; }
+  .badge.thin { background: #422006; color: #fbbf24; }
+  .note { background: #1a1d24; border: 1px solid #2a2e37; border-radius: 8px; padding: 12px 16px; font-size: 14px; line-height: 1.5; margin: 16px 0; }
+  .note b { color: #fff; }
+  .filters a { display: inline-block; margin-right: 8px; padding: 6px 14px; border-radius: 999px; background: #1a1d24; color: #e8e8e8; text-decoration: none; font-size: 14px; border: 1px solid #2a2e37; }
+  .filters a.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  form.refresh { display: inline; }
+  form.refresh button { padding: 6px 14px; border-radius: 999px; background: #2563eb; color: #fff; border: none; font-size: 14px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #2a2e37; }
+  th { color: #9aa0a6; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  .empty { color: #9aa0a6; padding: 24px 0; }
+  .err { background: #3b0d0d; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 14px; }
+  footer { color: #6b7280; font-size: 12px; margin-top: 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Header: title, LIVE or DEMO badge, last update, credit balance. -->
+  <h1>EV Finder <span class="badge {{ state.mode }}">{{ state.mode | upper }}</span></h1>
+  <div class="sub">
+    NBA &middot; Men&rsquo;s college basketball &middot; NFL &mdash; updated {{ state.updated or "never" }}
+    {% if state.credits_remaining is not none %} &middot; {{ state.credits_remaining }} API credits left this month{% endif %}
+  </div>
+
+  {% if state.error %}
+  <div class="err">Heads up: {{ state.error }} — showing what loaded.</div>
+  {% endif %}
+
+  <!-- Plain-language explainer: how the edge is found and what it assumes. -->
+  <div class="note">
+    <b>How it works, in plain language:</b> for every game line and prop, the program takes every
+    book&rsquo;s price, strips out the book&rsquo;s built-in margin, and finds the middle (median) fair
+    price across all the books. When one book&rsquo;s price is better than that fair price by at
+    least {{ (min_edge * 100) | int }}%, it shows up here.
+    <b>Edge</b> is how far the book&rsquo;s price sits from the fair price.
+    <b>EV</b> is the expected profit per $1 staked if the consensus is right.
+    <b>SOLID</b> means a 5%+ edge; <b>THIN</b> means 3&ndash;5% — real, but inside the noise.
+    The assumption every play rests on: the consensus is right. If the consensus is wrong,
+    the edge is wrong, and a single prop can miss by a wide margin even when the math is
+    right on average. This never places a bet for you.
+  </div>
+
+  <!-- Sport filters and the refresh button. -->
+  <div class="filters">
+    <a href="/?sport=all" class="{{ 'active' if sport == 'all' }}">All</a>
+    <a href="/?sport=basketball_nba" class="{{ 'active' if sport == 'basketball_nba' }}">NBA</a>
+    <a href="/?sport=basketball_ncaab" class="{{ 'active' if sport == 'basketball_ncaab' }}">NCAAB</a>
+    <a href="/?sport=americanfootball_nfl" class="{{ 'active' if sport == 'americanfootball_nfl' }}">NFL</a>
+    <form class="refresh" method="post" action="/refresh">
+      <input type="hidden" name="sport" value="{{ sport }}">
+      <button type="submit">Refresh lines</button>
+    </form>
+  </div>
+
+  <!-- The plays table, sorted by edge. Empty state when nothing clears the threshold. -->
+  {% if plays %}
+  <table>
+    <tr>
+      <th>Sport</th><th>Game</th><th>Market</th><th>Play</th><th>Book</th>
+      <th class="num">Book price</th><th class="num">Fair price</th>
+      <th class="num">Edge</th><th class="num">EV</th><th>Tag</th>
+    </tr>
+    {% for p in plays %}
+    <tr>
+      <td>{{ p.sport_title }}</td>
+      <td>{{ p.event }}</td>
+      <td>{{ p.market }}</td>
+      <td><b>{{ p.outcome }}</b></td>
+      <td>{{ p.book }}</td>
+      <td class="num">{{ p.book_price | fmt_price }}</td>
+      <td class="num">{{ p.fair_price | fmt_price }}</td>
+      <td class="num">+{{ p.edge_pp }}%</td>
+      <td class="num">+{{ p.ev_pct }}%</td>
+      <td><span class="badge {{ p.tag | lower }}">{{ p.tag }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="empty">No plays above the {{ (min_edge * 100) | int }}% edge threshold right now. Check back after the next refresh — lines move all day.</div>
+  {% endif %}
+
+  <footer>
+    {% if state.mode == "demo" %}
+    DEMO DATA — these lines are made-up samples, not real odds. Add a free key from
+    the-odds-api.com (500 credits/month, no card) as ODDS_API_KEY to scan live lines.
+    {% else %}
+    Live data from The Odds API. Game lines refresh every 15 minutes at most; player props
+    are fetched per event and cost more credits, so they are limited.
+    {% endif %}
+    <br>Method: consensus fair price across books (median, vig removed). Same approach
+    Optimal uses — Covers and Optimal have no public API, so this program does not call
+    them directly.
+  </footer>
+</div>
+</body>
+</html>
