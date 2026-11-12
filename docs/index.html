@@ -25,6 +25,16 @@
   th.num { text-align: right; }
   .empty { color: #9aa0a6; padding: 24px 0; }
   .err { background: #3b0d0d; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 14px; }
+  .record { background: #1a1d24; border: 1px solid #2a2e37; border-radius: 8px; padding: 14px 16px; margin: 16px 0; font-size: 15px; line-height: 1.6; }
+  .record b { color: #fff; }
+  .record .pos { color: #4ade80; font-weight: 700; }
+  .record .neg { color: #f87171; font-weight: 700; }
+  .record .small { color: #9aa0a6; font-size: 13px; }
+  .note .small { color: #9aa0a6; font-size: 13px; }
+  h2 { font-size: 18px; margin: 28px 0 0; }
+  .res-win { color: #4ade80; font-weight: 700; }
+  .res-loss { color: #f87171; font-weight: 700; }
+  .res-push { color: #9aa0a6; font-weight: 700; }
   footer { color: #6b7280; font-size: 12px; margin-top: 24px; line-height: 1.5; }
 </style>
 </head>
@@ -50,6 +60,10 @@
     right on average. This never places a bet for you.
   </div>
 
+  <!-- The record: wins, losses, units and ROI from every settled play.
+       Filled in by the script from plays-log.json. -->
+  <div class="record" id="record-box">Loading the record…</div>
+
   <!-- Sport filters. They only hide rows, they never fetch new data. -->
   <div class="filters" id="filters">
     <button data-sport="all" class="active">All</button>
@@ -60,6 +74,68 @@
 
   <!-- The plays table. Rows are built by the script from plays.json. -->
   <div id="table-wrap"></div>
+
+  <!-- Arbitrage: best price on each side at two different books, combined
+       under 100%. The whole section hides itself when the scan found no
+       arb, which is most days. -->
+  <div id="arb-wrap" style="display:none">
+    <h2>Arbitrage &mdash; guaranteed profit</h2>
+    <div class="note">
+      <b>What this is:</b> the best price on each side of a market, taken from
+      two different books, adds up to less than 100%. Bet both sides in the
+      stake split shown and the profit is locked in no matter who wins. No
+      model, no prediction &mdash; just arithmetic. Arbs are rare on these books
+      and usually under 1%; books may limit accounts that bet them often.
+    </div>
+    <div id="arb-table"></div>
+  </div>
+
+  <!-- Model props: the v5 projection model's own picks, separate
+       from the consensus +EV table above. The whole section hides
+       itself when the model flagged nothing, which is most days
+       it only runs on the NBA prop event in the daily scan. -->
+  <div id="model-wrap" style="display:none">
+    <h2>Model props &mdash; v5 projection picks</h2>
+    <div class="note">
+      <b>What this is:</b> a separate forward test. A projection model
+      (recency-weighted per-player stats, matchup, home/away) estimates
+      what each player will do, and flags a prop when its projection
+      implies 5%+ expected value against the book's price. These are
+      the model's picks, not the consensus — the backtest lost 0.68%
+      over one week (Oct 19&ndash;25, 2026), so treat this as an
+      experiment with a tracked record, not a proven edge. The record
+      is in the banner above and it starts at zero.
+    </div>
+    <div id="model-table"></div>
+  </div>
+
+  <!-- Line-move model: the v6 forward test, separate from the +EV
+       table above. The whole section hides itself when there is no
+       watch log yet, or when the log holds no flags. -->
+  <div id="watch-wrap" style="display:none">
+    <h2>Line-move model &mdash; forward test</h2>
+    <div class="note">
+      <b>Forward test &mdash; NOT a verified winner.</b> This model does not
+      predict games. It watches the line: when the spread moves at least
+      2 points from the open, money has come in on one side, and the rule
+      follows that side. It comes from the v6 backtest, where the 2-point
+      rule won 57% over two seasons &mdash; but that was one pick out of 16
+      tries, so it still has to prove itself on fresh games. The record
+      below starts at zero and only starts to mean something after
+      50&ndash;100 settled flags. It never places a bet for you.
+      <br><span class="small">One honest difference from the backtest:
+      Pinnacle is not in the live odds feed, so the watcher uses the
+      middle (median) move across the books that are there. The open line
+      shown is worked out from that median move.</span>
+    </div>
+    <div class="record" id="watch-record-box"></div>
+    <div id="watch-current"></div>
+    <div id="watch-history"></div>
+  </div>
+
+  <!-- Settled history: every play the tracker has graded, newest first. -->
+  <h2>Results history</h2>
+  <div id="history-wrap"><div class="empty">No settled plays yet.</div></div>
 
   <footer id="footer">
     Data refreshes once a day at 6:00 AM CT. A fresh run can also be started by hand
@@ -75,11 +151,249 @@
 // scheduled scan) and build the table from it. No key lives in this file.
 
 let allPlays = [];
+let allArbs = [];
+let allModelProps = [];
 let minEdge = 0.03;
+let logEntries = [];
+let modelLogEntries = [];
+let watchLog = null;
+
+// Book codes from the Oddize feed to the name a reader recognises.
+// Unknown codes fall back to the code itself.
+const BOOK_NAMES = {
+  b365: "Bet365", blys: "Bally's", boag: "BetOnline.ag",
+  briv: "BetRivers", circa: "Circa", dk: "DraftKings",
+  espn: "theScore Bet", mgm: "BetMGM", parx: "Parx",
+  pb: "PointsBet", phtx: "ProphetX", poly: "Polymarket"
+};
+
+// A spread line with its sign kept: +8.5 stays +8.5, -10.5 stays -10.5.
+function fmtLine(line) {
+  return (line > 0 ? "+" : "") + line;
+}
+
+// The open line for a flagged side, worked out from the median move.
+// The move is read off the home team's line: when the home line rises,
+// the money came in on the away team (and vice versa), so the away
+// side's open line is its current line plus the move, and the home
+// side's is its current line minus the move.
+function openLineFor(f) {
+  return f.side === f.away
+    ? f.side_line + f.median_move
+    : f.side_line - f.median_move;
+}
+
+// One plain-language sentence for why a flag was picked: the line
+// moved this far on that side, so the money is on that side.
+function watchReason(f) {
+  return "The line opened at " + fmtLine(openLineFor(f)) + " on " + f.side
+    + " and moved to " + fmtLine(f.side_line)
+    + " — money came in on that side, so the rule follows it.";
+}
+
+// The watch record: from the log's record field when it is there,
+// otherwise worked out from the graded flags. Profit is dollars at
+// the flat $100 stake; units are profit divided by 100.
+function watchRecord(flags, record) {
+  const graded = flags.filter(f => f.result);
+  const rec = record || {};
+  const w = rec.wins != null ? rec.wins : graded.filter(f => f.result === "win").length;
+  const l = rec.losses != null ? rec.losses : graded.filter(f => f.result === "loss").length;
+  const p = rec.pushes != null ? rec.pushes : graded.filter(f => f.result === "push").length;
+  const profit = rec.profit != null ? rec.profit
+    : graded.reduce((s, f) => s + (f.profit || 0), 0);
+  const roi = rec.roi != null ? rec.roi
+    : (graded.length ? profit / (graded.length * 100) : null);
+  return { flags: flags.length, graded: graded.length, w, l, p, profit, roi };
+}
+
+// Draw the line-move section: record line, today's ungraded flags,
+// and the settled history. The whole section stays hidden when there
+// is no log or no flags yet.
+function renderWatch() {
+  const wrap = document.getElementById("watch-wrap");
+  if (!watchLog || !Array.isArray(watchLog.flags) || !watchLog.flags.length) {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "block";
+  const flags = watchLog.flags;
+  const rec = watchRecord(flags, watchLog.record);
+  const box = document.getElementById("watch-record-box");
+  const units = rec.profit / 100;
+  const unitsCls = units >= 0 ? "pos" : "neg";
+  let html = "<b>Record:</b> " + rec.flags + " flag" + (rec.flags === 1 ? "" : "s")
+    + ", " + rec.graded + " graded";
+  if (rec.graded) {
+    html += " &middot; " + rec.w + "–" + rec.l + (rec.p ? "–" + rec.p : "")
+      + " &middot; <span class=\"" + unitsCls + "\">" + fmtSigned(units, 2) + "u</span>"
+      + " &middot; ROI " + fmtSigned(rec.roi * 100, 1) + "%";
+  } else {
+    html += " &middot; nothing settled yet";
+  }
+  html += "<br><span class=\"small\">Flat $100 per flag, paper only. "
+    + "The record only starts to mean something after 50–100 settled flags.</span>";
+  box.innerHTML = html;
+
+  // Today's ungraded flags, newest first.
+  const current = flags.filter(f => !f.result)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const curWrap = document.getElementById("watch-current");
+  if (current.length) {
+    let h = "<h2>Today&rsquo;s flag" + (current.length === 1 ? "" : "s") + "</h2><table>"
+      + "<tr><th>Date</th><th>Game</th><th>Pick</th><th>Book</th>"
+      + "<th class=\"num\">Price</th><th>Open &rarr; now</th>"
+      + "<th class=\"num\">Median move</th><th class=\"num\">Books at 2.0+</th><th>Why</th></tr>";
+    current.forEach(f => {
+      h += "<tr><td>" + f.date + "</td>"
+        + "<td>" + f.away + " @ " + f.home + "</td>"
+        + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+        + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
+        + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
+        + "<td>" + fmtLine(openLineFor(f)) + " &rarr; " + fmtLine(f.side_line) + "</td>"
+        + "<td class=\"num\">" + (f.median_move > 0 ? "+" : "") + f.median_move + "</td>"
+        + "<td class=\"num\">" + f.books_at_threshold + " of " + f.n_books + "</td>"
+        + "<td>" + watchReason(f) + "</td></tr>";
+    });
+    h += "</table>";
+    curWrap.innerHTML = h;
+  } else {
+    curWrap.innerHTML = "<div class=\"empty\">No ungraded flags right now — the next morning check adds today's.</div>";
+  }
+
+  // Settled history, newest first, latest 30 rows.
+  const histWrap = document.getElementById("watch-history");
+  const settled = flags.filter(f => f.result)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  if (!settled.length) {
+    histWrap.innerHTML = "";
+    return;
+  }
+  let h = "<h2>Line-move history</h2><table><tr><th>Date</th><th>Game</th><th>Pick</th>"
+    + "<th>Book</th><th class=\"num\">Price</th><th>Result</th><th class=\"num\">Profit</th></tr>";
+  settled.slice(0, 30).forEach(f => {
+    const resCls = f.result === "win" ? "res-win" : f.result === "loss" ? "res-loss" : "res-push";
+    const resText = f.result === "win" ? "Win" : f.result === "loss" ? "Loss" : "Push";
+    const profit = f.profit || 0;
+    h += "<tr><td>" + f.date + "</td>"
+      + "<td>" + f.away + " @ " + f.home + "</td>"
+      + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+      + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
+      + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
+      + "<td><span class=\"" + resCls + "\">" + resText + "</span></td>"
+      + "<td class=\"num\">" + (profit >= 0 ? "+$" : "-$") + Math.abs(profit).toFixed(2) + "</td></tr>";
+  });
+  h += "</table>";
+  if (settled.length > 30) {
+    h += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled flags.</div>";
+  }
+  histWrap.innerHTML = h;
+}
 
 // American price with the plus sign kept: +150 stays +150.
 function fmtPrice(price) {
   return price > 0 ? "+" + price : String(price);
+}
+
+// American price to decimal odds, for profit math: +150 -> 2.5, -110 -> 1.909.
+function americanToDecimal(price) {
+  return price > 0 ? 1 + price / 100 : 1 + 100 / Math.abs(price);
+}
+
+// Signed number with a plus sign when positive: +3.2u, -1.0u.
+function fmtSigned(n, digits, suffix) {
+  const s = n.toFixed(digits);
+  return (n > 0 ? "+" : "") + s + (suffix || "");
+}
+
+// Summarise one group of settled plays: wins, losses, pushes, units, ROI.
+function summarise(entries) {
+  const settled = entries.filter(e => e.status !== "pending");
+  const w = settled.filter(e => e.status === "win").length;
+  const l = settled.filter(e => e.status === "loss").length;
+  const p = settled.filter(e => e.status === "push").length;
+  const units = settled.reduce((sum, e) => sum + (e.profit || 0), 0);
+  const staked = settled.length; // flat 1 unit per play
+  const roi = staked ? (units / staked) * 100 : 0;
+  return { n: settled.length, w, l, p, units, roi };
+}
+
+// Draw the record banner from the log. Until anything is settled,
+// say so plainly instead of showing a 0-0 record.
+function renderRecord() {
+  const box = document.getElementById("record-box");
+  const all = summarise(logEntries);
+  if (!all.n) {
+    box.innerHTML = "<b>Record:</b> no settled plays yet — the tracker starts "
+      + "grading plays the morning after they are flagged."
+      + "<br><span class=\"small\">Flat 1 unit per play. The record only starts "
+      + "to mean something after 50–100 settled plays.</span>";
+    return;
+  }
+  const solid = summarise(logEntries.filter(e => e.tag === "SOLID"));
+  const thin = summarise(logEntries.filter(e => e.tag === "THIN"));
+  const unitsCls = all.units >= 0 ? "pos" : "neg";
+  let html = "<b>Record:</b> " + all.w + "–" + all.l
+    + (all.p ? "–" + all.p : "") + " &middot; "
+    + "<span class=\"" + unitsCls + "\">" + fmtSigned(all.units, 1) + "u</span>"
+    + " &middot; ROI " + fmtSigned(all.roi, 1) + "%"
+    + " &middot; " + all.n + " settled plays"
+    + "<br><span class=\"small\">SOLID: " + solid.w + "–" + solid.l
+    + " (" + fmtSigned(solid.units, 1) + "u)"
+    + " &nbsp;·&nbsp; THIN: " + thin.w + "–" + thin.l
+    + " (" + fmtSigned(thin.units, 1) + "u)"
+    + "<br>Flat 1 unit per play. The record only starts to mean something "
+    + "after 50–100 settled plays.</span>";
+  // The v5 model props keep their own record, graded from a separate
+  // log. It is shown on its own line so it never mixes into the
+  // consensus record above.
+  const model = summarise(modelLogEntries);
+  if (model.n) {
+    const mCls = model.units >= 0 ? "pos" : "neg";
+    html += "<br><b>Model props (v5):</b> " + model.w + "–" + model.l
+      + (model.p ? "–" + model.p : "") + " &middot; "
+      + "<span class=\"" + mCls + "\">" + fmtSigned(model.units, 1) + "u</span>"
+      + " &middot; ROI " + fmtSigned(model.roi, 1) + "%"
+      + " &middot; " + model.n + " settled plays"
+      + "<br><span class=\"small\">The model's forward test — it starts at "
+      + "zero and builds one day at a time. Backtest: −0.68% over one "
+      + "week (Oct 19–25, 2026), so this is an experiment, not a "
+      + "proven edge.</span>";
+  }
+  box.innerHTML = html;
+}
+
+// Draw the settled history table, newest first, latest 30 rows.
+function renderHistory() {
+  const wrap = document.getElementById("history-wrap");
+  const settled = logEntries
+    .filter(e => e.status !== "pending")
+    .sort((a, b) => (b.settled_date || b.date).localeCompare(a.settled_date || a.date));
+  if (!settled.length) {
+    wrap.innerHTML = "<div class=\"empty\">No settled plays yet.</div>";
+    return;
+  }
+  let html = "<table><tr><th>Date</th><th>Game</th><th>Play</th><th>Book</th>"
+    + "<th class=\"num\">Price</th><th class=\"num\">Edge</th><th>Result</th>"
+    + "<th class=\"num\">Profit</th></tr>";
+  settled.slice(0, 30).forEach(e => {
+    const resCls = e.status === "win" ? "res-win"
+      : e.status === "loss" ? "res-loss" : "res-push";
+    const resText = e.status === "win" ? "Win" : e.status === "loss" ? "Loss" : "Push";
+    html += "<tr><td>" + (e.settled_date || e.date) + "</td>"
+      + "<td>" + e.event + "</td>"
+      + "<td><b>" + e.outcome + "</b></td>"
+      + "<td>" + e.book + "</td>"
+      + "<td class=\"num\">" + fmtPrice(e.book_price) + "</td>"
+      + "<td class=\"num\">+" + e.edge_pp + "%</td>"
+      + "<td><span class=\"" + resCls + "\">" + resText + "</span></td>"
+      + "<td class=\"num\">" + fmtSigned(e.profit || 0, 2) + "u</td></tr>";
+  });
+  html += "</table>";
+  if (settled.length > 30) {
+    html += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled plays.</div>";
+  }
+  wrap.innerHTML = html;
 }
 
 // Build one table row for a play.
@@ -115,6 +429,61 @@ function render(sport) {
   wrap.innerHTML = html;
 }
 
+// Draw the arbitrage table. The whole section stays hidden unless the
+// scan actually found an arb — most days it finds none. Arbs are shown
+// for all sports at once; the sport filter above only affects the +EV
+// table, not this section.
+function renderArbs() {
+  const wrap = document.getElementById("arb-wrap");
+  if (!allArbs.length) {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "block";
+  let html = "<table><tr><th>Sport</th><th>Game</th><th>Market</th>"
+    + "<th>Side A</th><th>Side B</th>"
+    + "<th class=\"num\">Combined</th><th class=\"num\">Guaranteed ROI</th>"
+    + "<th class=\"num\">$100 stake split</th></tr>";
+  allArbs.forEach(a => {
+    html += "<tr><td>" + a.sport_title + "</td>"
+      + "<td>" + a.event + "</td>"
+      + "<td>" + a.market + "</td>"
+      + "<td><b>" + a.outcome_a + "</b><br>" + a.book_a + " " + fmtPrice(a.price_a) + "</td>"
+      + "<td><b>" + a.outcome_b + "</b><br>" + a.book_b + " " + fmtPrice(a.price_b) + "</td>"
+      + "<td class=\"num\">" + a.combined_implied_pct + "%</td>"
+      + "<td class=\"num\"><span class=\"res-win\">+" + a.roi_pct + "%</span></td>"
+      + "<td class=\"num\">$" + a.stake_a.toFixed(2) + " / $" + a.stake_b.toFixed(2) + "</td></tr>";
+  });
+  html += "</table>";
+  document.getElementById("arb-table").innerHTML = html;
+}
+
+// Draw the model props table. The whole section stays hidden
+// unless the scan's model flagged a prop — it only runs on the one
+// NBA prop event in the daily scan, so most days it finds a few.
+function renderModelProps() {
+  const wrap = document.getElementById("model-wrap");
+  if (!allModelProps.length) {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "block";
+  let html = "<table><tr><th>Game</th><th>Play</th><th>Book</th>"
+    + "<th class=\"num\">Price</th><th class=\"num\">Projection</th>"
+    + "<th class=\"num\">P(over)</th><th class=\"num\">EV</th></tr>";
+  allModelProps.forEach(p => {
+    html += "<tr><td>" + p.event + "</td>"
+      + "<td><b>" + p.outcome + "</b><br><span class=\"small\">" + p.market + "</span></td>"
+      + "<td>" + p.book + "</td>"
+      + "<td class=\"num\">" + fmtPrice(p.book_price) + "</td>"
+      + "<td class=\"num\">" + p.projection + "</td>"
+      + "<td class=\"num\">" + (p.p_over * 100).toFixed(0) + "%</td>"
+      + "<td class=\"num\"><span class=\"res-win\">+" + p.ev_pct + "%</span></td></tr>";
+  });
+  html += "</table>";
+  document.getElementById("model-table").innerHTML = html;
+}
+
 // Filter buttons: mark the clicked one active and re-draw the table.
 document.getElementById("filters").addEventListener("click", (e) => {
   if (e.target.tagName !== "BUTTON") return;
@@ -123,11 +492,38 @@ document.getElementById("filters").addEventListener("click", (e) => {
   render(e.target.dataset.sport);
 });
 
+// Load the record log and draw the record banner and history table.
+// A missing log file just means nothing has been graded yet.
+fetch("plays-log.json")
+  .then(r => { if (!r.ok) throw new Error("plays-log.json not found"); return r.json(); })
+  .then(log => { logEntries = Array.isArray(log) ? log : []; })
+  .catch(() => { logEntries = []; })
+  .finally(() => { renderRecord(); renderHistory(); });
+
+// Load the model-props log (the v5 forward test) and add its record
+// line to the banner. Missing just means no model play has settled.
+fetch("model-props-log.json")
+  .then(r => { if (!r.ok) throw new Error("model-props-log.json not found"); return r.json(); })
+  .then(log => { modelLogEntries = Array.isArray(log) ? log : []; })
+  .catch(() => { modelLogEntries = []; })
+  .finally(() => { renderRecord(); });
+
+// Load the line-move watch log and draw the forward-test section.
+// A missing log just means the watcher has not run yet — the whole
+// section stays hidden.
+fetch("watch-log.json")
+  .then(r => { if (!r.ok) throw new Error("watch-log.json not found"); return r.json(); })
+  .then(log => { watchLog = log; })
+  .catch(() => { watchLog = null; })
+  .finally(() => { renderWatch(); });
+
 // Load the scan result and fill in the header, then draw the table.
 fetch("plays.json")
   .then(r => { if (!r.ok) throw new Error("plays.json not found"); return r.json(); })
   .then(data => {
     allPlays = data.plays || [];
+    allArbs = data.arbs || [];
+    allModelProps = data.model_props || [];
     minEdge = data.min_edge || 0.03;
     const badge = document.getElementById("mode-badge");
     badge.textContent = (data.mode || "demo").toUpperCase();
@@ -148,6 +544,8 @@ fetch("plays.json")
         + "<br>" + document.getElementById("footer").innerHTML;
     }
     render("all");
+    renderArbs();
+    renderModelProps();
   })
   .catch(() => {
     document.getElementById("subtitle").textContent = "No scan has run yet — check back after the first scheduled run.";

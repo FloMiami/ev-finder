@@ -13,6 +13,19 @@
 #   3. Repo Settings -> Pages -> Source: Deploy from a branch ->
 #      Branch: main, Folder: /docs. The site is then live at
 #      https://<your-username>.github.io/<repo-name>/
+#   4. (Optional, for the line-move flag step only.) Repo Settings ->
+#      Secrets and variables -> Actions -> New repository secret:
+#      ODDIZE_API_KEY = your key from the Oddize dashboard. Without
+#      it, the flag step skips itself and the site still shows the
+#      flags graded from the log committed by hand; the grade step
+#      below needs no key at all.
+#
+# Line-move model (v6 forward test): after the EV scan, the workflow
+# grades yesterday's line-move flags (free, ESPN only), flags today's
+# games when the ODDIZE_API_KEY secret exists (1 Oddize credit), and
+# copies the log into docs/watch-log.json for the site. Every watcher
+# step is guarded with continue-on-error, so a watcher failure can
+# never fail the EV scan.
 #
 # Credit budget (free tier, 500/month): one run costs about 15 credits
 # (9 for game lines + about 6 for 1 NBA prop event). Daily runs are
@@ -48,8 +61,15 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      # Settle yesterday's plays first, so the record is current before
+      # today's scan appends new plays. Uses ESPN's free scoreboard,
+      # so it costs no Odds API credits.
+      - name: Settle yesterday's plays
+        run: python settle_results.py
+
       # Run the scan. The key comes from the ODDS_API_KEY repository
-      # secret, never from the code. Writes docs/plays.json.
+      # secret, never from the code. Writes docs/plays.json and appends
+      # the new plays to docs/plays-log.json.
       - name: Run the EV scan
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -58,12 +78,45 @@ jobs:
           PROP_SPORTS: "basketball_nba"
         run: python scan_static.py
 
-      # Commit the updated plays file, but only if it actually changed.
+      # Grade yesterday's line-move flags first, so the record is
+      # current before today's flags are added. Uses ESPN's free
+      # scoreboard, so it costs no credits and needs no key.
+      # Guarded: a grading failure must never fail the EV scan.
+      - name: Grade yesterday's line-move flags
+        continue-on-error: true
+        run: PYTHONPATH=. python model/v6/live_watch/grade.py
+
+      # Flag today's line moves (optional — needs the Oddize key).
+      # The step skips itself when the ODDIZE_API_KEY repo secret is
+      # not set, so the scan works without it. When the secret IS
+      # set, watch.py sends it as the X-API-Key header (1 credit)
+      # and appends today's flags to the live-watch log. Guarded so
+      # a flagging failure never fails the EV scan.
+      - name: Flag today's line moves
+        continue-on-error: true
+        env:
+          ODDIZE_API_KEY: ${{ secrets.ODDIZE_API_KEY }}
+        run: |
+          if [ -z "$ODDIZE_API_KEY" ]; then
+            echo "No ODDIZE_API_KEY secret set — skipping the flag step."
+            exit 0
+          fi
+          PYTHONPATH=. python model/v6/live_watch/watch.py
+
+      # Copy the graded watch log into docs/ so the site can read it.
+      # Guarded: a sync failure must never fail the EV scan.
+      - name: Sync the line-move log to the site
+        continue-on-error: true
+        run: python model/v6/live_watch/sync_docs.py
+
+      # Commit the updated files, but only if they actually changed.
       # The empty-commit check keeps the history clean on quiet days.
+      # The live-watch logs are committed too, so the graded record
+      # stays current in the repo and not only in the docs copy.
       - name: Publish updated plays
         run: |
           git config user.name "ev-finder-bot"
           git config user.email "ev-finder-bot@users.noreply.github.com"
-          git add docs/plays.json
+          git add docs/plays.json docs/plays-log.json docs/watch-log.json model/v6/live_watch/watch-log.json model/v6/live_watch/watch-diagnostic.json
           git diff --cached --quiet || git commit -m "Update +EV plays"
           git push

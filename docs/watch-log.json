@@ -1,0 +1,49 @@
+{
+  "flags": [
+    {
+      "away": "TOR",
+      "book": "phtx",
+      "books_at_threshold": 6,
+      "credits_remaining_after": 57,
+      "date": "2026-11-12",
+      "event_id": "202611120PHI",
+      "flagged_at": "2026-11-12T17:18:49.547535+00:00",
+      "graded_at": null,
+      "home": "PHI",
+      "median_move": 2.0,
+      "n_books": 11,
+      "per_book_move": {
+        "b365": 2.0,
+        "blys": 2.0,
+        "boag": 0.5,
+        "briv": 2.0,
+        "circa": 2.0,
+        "dk": 0.0,
+        "espn": 1.0,
+        "mgm": 2.0,
+        "parx": 2.0,
+        "pb": 1.0,
+        "phtx": 1.0
+      },
+      "price": -108,
+      "profit": null,
+      "result": null,
+      "score_away": null,
+      "score_home": null,
+      "side": "TOR",
+      "side_line": 8.5,
+      "tipoff": "2026-11-12T19:00:00-05:00"
+    }
+  ],
+  "record": {
+    "flags": 1,
+    "graded": 0,
+    "losses": 0,
+    "profit": 0,
+    "pushes": 0,
+    "roi": null,
+    "wins": 0
+  },
+  "rule": "NBA spreads, follow the line move >= 2.0 points (median move across real sportsbooks), flat $100, paper only",
+  "status": "forward test, NOT a verified winner"
+}
