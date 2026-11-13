@@ -36,6 +36,31 @@
   .res-loss { color: #f87171; font-weight: 700; }
   .res-push { color: #9aa0a6; font-weight: 700; }
   footer { color: #6b7280; font-size: 12px; margin-top: 24px; line-height: 1.5; }
+  /* Safety net for mid-size screens: if a wide table ever overflows its
+     container, it scrolls sideways inside the container instead of
+     breaking the page layout. No scrollbar appears when it fits. */
+  #table-wrap, #arb-table, #model-table, #watch-current, #watch-history,
+  #manual-current, #manual-history, #history-wrap { overflow-x: auto; }
+
+  /* Narrow screens (phones): the tables become stacked cards. Each row
+     is a card, each cell shows its column name above its value (the name
+     is set by labelCells() in the script, taken from the header row), and
+     the header row hides itself. Desktop is untouched — this only
+     applies at 640px and under. */
+  @media (max-width: 640px) {
+    body { padding: 16px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 17px; margin-top: 24px; }
+    .note, .record { padding: 12px; }
+    .filters button { padding: 8px 16px; margin-bottom: 6px; }
+    table, tbody { display: block; font-size: 14px; }
+    table tr:first-child { display: none; }
+    table tr { display: block; background: #1a1d24; border: 1px solid #2a2e37; border-radius: 8px; padding: 6px 12px; margin-bottom: 12px; }
+    table td { display: block; padding: 7px 0; border-bottom: none; text-align: left; }
+    table td + td { border-top: 1px solid #262a33; }
+    table td::before { content: attr(data-label); display: block; font-size: 12px; font-weight: 600; color: #9aa0a6; margin-bottom: 2px; }
+    table td.num { text-align: left; }
+  }
 </style>
 </head>
 <body>
@@ -284,6 +309,10 @@ function renderWatch() {
     curWrap.innerHTML = "<div class=\"empty\">No ungraded flags right now — the next morning check adds today's.</div>";
   }
 
+  // The current flags are on the page now, so label them for the
+  // stacked-card view on narrow screens.
+  labelCells();
+
   // Settled history, newest first, latest 30 rows.
   const histWrap = document.getElementById("watch-history");
   const settled = flags.filter(f => f.result)
@@ -311,6 +340,7 @@ function renderWatch() {
     h += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled flags.</div>";
   }
   histWrap.innerHTML = h;
+  labelCells();
 }
 
 // Escape text typed in by a person (a name, a note) so a stray
@@ -402,6 +432,10 @@ function renderManual() {
     curWrap.innerHTML = "<div class=\"empty\">No ungraded picks right now — the next call-in shows up here.</div>";
   }
 
+  // The current picks are on the page now, so label them for the
+  // stacked-card view on narrow screens.
+  labelCells();
+
   // Settled history, newest first, latest 30 rows.
   const histWrap = document.getElementById("manual-history");
   const settled = flags.filter(f => f.result)
@@ -430,6 +464,7 @@ function renderManual() {
     h += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled picks.</div>";
   }
   histWrap.innerHTML = h;
+  labelCells();
 }
 
 // American price with the plus sign kept: +150 stays +150.
@@ -446,6 +481,25 @@ function americanToDecimal(price) {
 function fmtSigned(n, digits, suffix) {
   const s = n.toFixed(digits);
   return (n > 0 ? "+" : "") + s + (suffix || "");
+}
+
+// On a narrow screen the tables become stacked cards (see the CSS
+// above). Each cell shows its column name, taken from the table's own
+// header row, so a card reads like a labeled list instead of a grid.
+// Run after every render that builds a table. Safe to call again and
+// again — it just re-sets the same labels.
+function labelCells() {
+  document.querySelectorAll("table").forEach(t => {
+    const head = t.querySelector("tr");
+    if (!head) return;
+    const labels = [...head.querySelectorAll("th")].map(th => th.textContent.trim());
+    t.querySelectorAll("tr").forEach((row, i) => {
+      if (i === 0) return; // the header row itself
+      row.querySelectorAll("td").forEach((cell, j) => {
+        cell.setAttribute("data-label", labels[j] || "");
+      });
+    });
+  });
 }
 
 // Summarise one group of settled plays: wins, losses, pushes, units, ROI.
@@ -536,6 +590,7 @@ function renderHistory() {
     html += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled plays.</div>";
   }
   wrap.innerHTML = html;
+  labelCells();
 }
 
 // Build one table row for a play.
@@ -569,6 +624,7 @@ function render(sport) {
   plays.forEach(p => { html += rowHtml(p); });
   html += "</table>";
   wrap.innerHTML = html;
+  labelCells();
 }
 
 // Draw the arbitrage table. The whole section stays hidden unless the
@@ -598,6 +654,7 @@ function renderArbs() {
   });
   html += "</table>";
   document.getElementById("arb-table").innerHTML = html;
+  labelCells();
 }
 
 // Draw the model props table. The whole section stays hidden
@@ -624,6 +681,7 @@ function renderModelProps() {
   });
   html += "</table>";
   document.getElementById("model-table").innerHTML = html;
+  labelCells();
 }
 
 // Filter buttons: mark the clicked one active and re-draw the table.
