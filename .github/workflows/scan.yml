@@ -118,6 +118,12 @@ jobs:
           git config user.name "ev-finder-bot"
           git config user.email "ev-finder-bot@users.noreply.github.com"
           git add docs/plays.json docs/watch-log.json model/v6/live_watch/watch-log.json model/v6/live_watch/watch-diagnostic.json
+          # The tracker log only exists once a play has actually been flagged —
+          # add it only if the file is there, or git add fails the whole step.
           [ -f docs/plays-log.json ] && git add docs/plays-log.json
+          # Same for the manual-picks logs: they only exist once a pick
+          # has been called in, so add them only if they are there.
+          [ -f model/v6/live_watch/manual-picks-log.json ] && git add model/v6/live_watch/manual-picks-log.json
+          [ -f docs/manual-picks-log.json ] && git add docs/manual-picks-log.json
           git diff --cached --quiet || git commit -m "Update +EV plays"
           git push

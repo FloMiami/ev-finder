@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Copy the live-watch log to the site folder so the page can read it.
+"""Copy the live-watch logs to the site folder so the page can read them.
 
-The watcher (watch.py / grade.py) writes model/v6/live_watch/watch-log.json.
+The watcher (watch.py / grade.py) writes model/v6/live_watch/watch-log.json,
+and hand-called picks live in manual-picks-log.json beside it.
 The GitHub Pages site serves only the docs/ folder, so the page reads
-docs/watch-log.json. This script copies the log over and then checks
-both copies still parse as JSON and hold the same number of flags —
-if anything does not match, it exits non-zero and leaves the old
-docs copy alone.
+docs/watch-log.json and docs/manual-picks-log.json. This script copies
+each log over and then checks both copies still parse as JSON and hold
+the same number of flags — if anything does not match, it exits
+non-zero and leaves the old docs copy alone.
 
 Run it after watch.py / grade.py, from anywhere:
     python3 model/v6/live_watch/sync_docs.py
@@ -26,6 +27,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SOURCE = os.path.join(HERE, "watch-log.json")
 DEST = os.path.join(REPO_ROOT, "docs", "watch-log.json")
+MANUAL_SOURCE = os.path.join(HERE, "manual-picks-log.json")
+MANUAL_DEST = os.path.join(REPO_ROOT, "docs", "manual-picks-log.json")
 
 
 def load_log(path):
@@ -34,32 +37,49 @@ def load_log(path):
         return json.load(f)
 
 
-def main():
-    """Copy the log, then verify the copy matches the source."""
-    if not os.path.exists(SOURCE):
-        print("No log to sync yet: %s does not exist" % SOURCE)
-        return 1
-    source = load_log(SOURCE)
-    if not isinstance(source.get("flags"), list):
-        print("Source log has no flags list — refusing to sync")
-        return 1
-    # Copy to a temporary file first, then move it into place, so the
-    # docs copy is never half-written if the copy is interrupted.
-    tmp = DEST + ".tmp"
-    shutil.copyfile(SOURCE, tmp)
-    os.replace(tmp, DEST)
+def sync_file(source, dest, label):
+    """Copy one log to docs/ with temp-file + verify.
+
+    Copies to a temporary file first, then moves it into place, so
+    the docs copy is never half-written if the copy is interrupted.
+    Then checks the docs copy still parses and holds the same number
+    of flags. Returns True on success, False when the source log
+    does not exist yet or the copy does not verify."""
+    if not os.path.exists(source):
+        print("No %s log to sync yet: %s does not exist" % (label, source))
+        return False
+    source_log = load_log(source)
+    if not isinstance(source_log.get("flags"), list):
+        print("Source %s log has no flags list — refusing to sync" % label)
+        return False
+    tmp = dest + ".tmp"
+    shutil.copyfile(source, tmp)
+    os.replace(tmp, dest)
     # Verify: the docs copy must parse and hold the same flags.
-    dest = load_log(DEST)
-    if len(dest.get("flags", [])) != len(source["flags"]):
-        print("Sync check failed: source has %d flags, docs copy has %d"
-              % (len(source["flags"]), len(dest.get("flags", []))))
+    dest_log = load_log(dest)
+    if len(dest_log.get("flags", [])) != len(source_log["flags"]):
+        print("Sync check failed for %s: source has %d flags, docs copy "
+              "has %d" % (label, len(source_log["flags"]),
+                          len(dest_log.get("flags", []))))
+        return False
+    record = dest_log.get("record", {})
+    print("Synced docs/%s: %d flag(s), %d graded, record %d-%d-%d"
+          % (os.path.basename(dest), len(dest_log["flags"]),
+             record.get("graded", 0), record.get("wins", 0),
+             record.get("losses", 0), record.get("pushes", 0)))
+    return True
+
+
+def main():
+    """Copy the watch log, then the manual-picks log if it exists.
+
+    The watch log is required — without it there is nothing to
+    publish. The manual log is optional: it only exists once a
+    pick has been called in, so a missing one is skipped with a
+    message and the run still exits 0 when the watch log synced."""
+    if not sync_file(SOURCE, DEST, "watch"):
         return 1
-    record = dest.get("record", {})
-    print("Synced docs/watch-log.json: %d flag(s), %d graded, "
-          "record %d-%d-%d"
-          % (len(dest["flags"]), record.get("graded", 0),
-             record.get("wins", 0), record.get("losses", 0),
-             record.get("pushes", 0)))
+    sync_file(MANUAL_SOURCE, MANUAL_DEST, "manual picks")
     return 0
 
 

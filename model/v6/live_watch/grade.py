@@ -39,6 +39,7 @@ SETTLE_DELAY = timedelta(hours=6)
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRIMARY_LOG = os.path.join(HERE, "watch-log.json")
 DIAGNOSTIC_LOG = os.path.join(HERE, "watch-diagnostic.json")
+MANUAL_LOG = os.path.join(HERE, "manual-picks-log.json")
 
 # ESPN's team abbreviations -> the abbreviations Oddize uses. ESPN
 # differs in nine cases; the rest (BOS, LAL, MIA, ...) already match.
@@ -222,6 +223,17 @@ def grade_log(path, cache, now):
         flag["profit"] = profit_for(flag["price"], result)
         flag["graded_at"] = now.isoformat()
         graded_now += 1
+        # A manual pick is named by who called it in, not by the
+        # model's "follow the move" wording — same grading, same
+        # math, just a different source.
+        if flag.get("source") == "manual":
+            print("  %s @ %s (%s): manual pick by %s — %s %s at %d — "
+                  "%s, final %d-%d, profit $%.2f"
+                  % (flag["away"], flag["home"], flag["date"],
+                     flag.get("by", "?"), flag["side"],
+                     flag["side_line"], flag["price"], result,
+                     score_away, score_home, flag["profit"]))
+            continue
         print("  %s @ %s (%s): follow %s %s at %d — %s, final %d-%d, "
               "profit $%.2f"
               % (flag["away"], flag["home"], flag["date"], flag["side"],
@@ -235,7 +247,12 @@ def grade_log(path, cache, now):
 
 
 def main():
-    """Grade both logs and print the running records."""
+    """Grade all three logs and print the running records.
+
+    The manual-picks log is graded exactly like the model logs —
+    same ESPN scoreboard, same spread math, same flat $100 stake —
+    but its record stays separate, so the model's forward test is
+    never mixed with hand-called picks."""
     now = datetime.now(timezone.utc)
     cache = {}
     print("Grading primary log (%s)..." % PRIMARY_LOG)
@@ -244,7 +261,10 @@ def main():
     print("Grading diagnostic log (%s)..." % DIAGNOSTIC_LOG)
     graded, pending = grade_log(DIAGNOSTIC_LOG, cache, now)
     print("  graded %d now, %d still pending" % (graded, pending))
-    for path in (PRIMARY_LOG, DIAGNOSTIC_LOG):
+    print("Grading manual-picks log (%s)..." % MANUAL_LOG)
+    graded, pending = grade_log(MANUAL_LOG, cache, now)
+    print("  graded %d now, %d still pending" % (graded, pending))
+    for path in (PRIMARY_LOG, DIAGNOSTIC_LOG, MANUAL_LOG):
         if not os.path.exists(path):
             continue
         with open(path) as f:

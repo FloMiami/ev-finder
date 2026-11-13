@@ -133,6 +133,27 @@
     <div id="watch-history"></div>
   </div>
 
+  <!-- Manual picks: spread picks called in by hand by friends of the
+       site, NOT the model. Separate log, separate record, same
+       grading — so the model's forward test stays clean. The whole
+       section hides itself when there is no manual log yet, or when
+       the log holds no picks. -->
+  <div id="manual-wrap" style="display:none">
+    <h2>Manual picks</h2>
+    <div class="note">
+      <b>Called in by hand &mdash; NOT the model.</b> These are spread
+      picks phoned in by friends of the site and added by hand before
+      tipoff. They are graded the same way as the model flags (same
+      morning, same flat $100 stake), but they live in their own record
+      so the line-move model's forward test stays clean. A pick only
+      counts if the line was actually available when it was called
+      &mdash; nothing is added after tipoff.
+    </div>
+    <div class="record" id="manual-record-box"></div>
+    <div id="manual-current"></div>
+    <div id="manual-history"></div>
+  </div>
+
   <!-- Settled history: every play the tracker has graded, newest first. -->
   <h2>Results history</h2>
   <div id="history-wrap"><div class="empty">No settled plays yet.</div></div>
@@ -157,6 +178,7 @@ let minEdge = 0.03;
 let logEntries = [];
 let modelLogEntries = [];
 let watchLog = null;
+let manualLog = null;
 
 // Book codes from the Oddize feed to the name a reader recognises.
 // Unknown codes fall back to the code itself.
@@ -286,6 +308,99 @@ function renderWatch() {
   h += "</table>";
   if (settled.length > 30) {
     h += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled flags.</div>";
+  }
+  histWrap.innerHTML = h;
+}
+
+// Escape text typed in by a person (a name, a note) so a stray
+// "<" or "&" can never break the page. The model's own data is
+// machine-made and does not need it; manual picks do.
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Draw the manual-picks section: record line, today's ungraded
+// picks, and the settled history. Mirrors renderWatch, except
+// there is no open line or line move to show — a hand-called pick
+// has no movement data, just the line it was called at, who called
+// it, and the note if there is one. The whole section stays hidden
+// when there is no log or no picks yet.
+function renderManual() {
+  const wrap = document.getElementById("manual-wrap");
+  if (!manualLog || !Array.isArray(manualLog.flags) || !manualLog.flags.length) {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "block";
+  const flags = manualLog.flags;
+  const rec = watchRecord(flags, manualLog.record);
+  const box = document.getElementById("manual-record-box");
+  const units = rec.profit / 100;
+  const unitsCls = units >= 0 ? "pos" : "neg";
+  let html = "<b>Record:</b> " + rec.flags + " pick" + (rec.flags === 1 ? "" : "s")
+    + ", " + rec.graded + " graded";
+  if (rec.graded) {
+    html += " &middot; " + rec.w + "–" + rec.l + (rec.p ? "–" + rec.p : "")
+      + " &middot; <span class=\"" + unitsCls + "\">" + fmtSigned(units, 2) + "u</span>"
+      + " &middot; ROI " + fmtSigned(rec.roi * 100, 1) + "%";
+  } else {
+    html += " &middot; nothing settled yet";
+  }
+  html += "<br><span class=\"small\">Flat $100 per pick, paper only. "
+    + "Graded the same morning as the model flags.</span>";
+  box.innerHTML = html;
+
+  // Today's ungraded picks, newest first.
+  const current = flags.filter(f => !f.result)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const curWrap = document.getElementById("manual-current");
+  if (current.length) {
+    let h = "<h2>Today&rsquo;s pick" + (current.length === 1 ? "" : "s") + "</h2><table>"
+      + "<tr><th>Date</th><th>Game</th><th>Pick</th><th>Book</th>"
+      + "<th class=\"num\">Price</th><th>Called by</th><th>Note</th></tr>";
+    current.forEach(f => {
+      h += "<tr><td>" + f.date + "</td>"
+        + "<td>" + f.away + " @ " + f.home + "</td>"
+        + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+        + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
+        + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
+        + "<td>Manual &middot; by " + esc(f.by) + "</td>"
+        + "<td>" + (f.note ? esc(f.note) : "&mdash;") + "</td></tr>";
+    });
+    h += "</table>";
+    curWrap.innerHTML = h;
+  } else {
+    curWrap.innerHTML = "<div class=\"empty\">No ungraded picks right now — the next call-in shows up here.</div>";
+  }
+
+  // Settled history, newest first, latest 30 rows.
+  const histWrap = document.getElementById("manual-history");
+  const settled = flags.filter(f => f.result)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  if (!settled.length) {
+    histWrap.innerHTML = "";
+    return;
+  }
+  let h = "<h2>Manual picks history</h2><table><tr><th>Date</th><th>Game</th><th>Pick</th>"
+    + "<th>Book</th><th class=\"num\">Price</th><th>Called by</th><th>Result</th><th class=\"num\">Profit</th></tr>";
+  settled.slice(0, 30).forEach(f => {
+    const resCls = f.result === "win" ? "res-win" : f.result === "loss" ? "res-loss" : "res-push";
+    const resText = f.result === "win" ? "Win" : f.result === "loss" ? "Loss" : "Push";
+    const profit = f.profit || 0;
+    h += "<tr><td>" + f.date + "</td>"
+      + "<td>" + f.away + " @ " + f.home + "</td>"
+      + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+      + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
+      + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
+      + "<td>Manual &middot; by " + esc(f.by) + "</td>"
+      + "<td><span class=\"" + resCls + "\">" + resText + "</span></td>"
+      + "<td class=\"num\">" + (profit >= 0 ? "+$" : "-$") + Math.abs(profit).toFixed(2) + "</td></tr>";
+  });
+  h += "</table>";
+  if (settled.length > 30) {
+    h += "<div class=\"empty\">Showing the latest 30 of " + settled.length + " settled picks.</div>";
   }
   histWrap.innerHTML = h;
 }
@@ -516,6 +631,15 @@ fetch("watch-log.json")
   .then(log => { watchLog = log; })
   .catch(() => { watchLog = null; })
   .finally(() => { renderWatch(); });
+
+// Load the manual-picks log and draw the manual section. A missing
+// log just means no pick has been called in yet — the whole section
+// stays hidden.
+fetch("manual-picks-log.json")
+  .then(r => { if (!r.ok) throw new Error("manual-picks-log.json not found"); return r.json(); })
+  .then(log => { manualLog = log; })
+  .catch(() => { manualLog = null; })
+  .finally(() => { renderManual(); });
 
 // Load the scan result and fill in the header, then draw the table.
 fetch("plays.json")
