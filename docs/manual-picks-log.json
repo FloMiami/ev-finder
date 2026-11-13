@@ -1,7 +1,55 @@
 {
-  "flags": [],
+  "flags": [
+    {
+      "away": "Taylor Fritz",
+      "book": "dk",
+      "books_at_threshold": null,
+      "by": "Tony",
+      "credits_remaining_after": null,
+      "date": "2026-11-13",
+      "event_id": "manual-parlay-20261113-tony-a794e652",
+      "flagged_at": "2026-11-13T16:07:13.511320+00:00",
+      "graded_at": null,
+      "home": "Lorenzo Musetti",
+      "legs": [
+        {
+          "away": "Taylor Fritz",
+          "home": "Lorenzo Musetti",
+          "line": null,
+          "side": "Taylor Fritz",
+          "sport": "tennis",
+          "tipoff": "2026-11-13T11:00:00-05:00"
+        },
+        {
+          "away": "Stefan Kozlov",
+          "home": "Michael Zheng",
+          "line": null,
+          "side": "Michael Zheng",
+          "sport": "tennis",
+          "tipoff": "2026-11-13T18:00:00-05:00"
+        }
+      ],
+      "median_move": null,
+      "n_books": null,
+      "note": "2-leg tennis parlay, $50 actual stake (tracked at flat $100)",
+      "per_book_move": null,
+      "placed_at": "2026-11-13T08:21:06-06:00",
+      "price": 138,
+      "profit": null,
+      "receipt": "DK639301764648221740",
+      "result": null,
+      "score_away": null,
+      "score_home": null,
+      "side": "Taylor Fritz",
+      "side_line": null,
+      "source": "manual",
+      "sport": "tennis",
+      "tipoff": "2026-11-13T11:00:00-05:00",
+      "type": "parlay"
+    }
+  ],
   "record": {
-    "flags": 0,
+    "flags": 1,
     "graded": 0,
     "losses": 0,
     "profit": 0,

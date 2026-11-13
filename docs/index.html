@@ -142,12 +142,13 @@
     <h2>Manual picks</h2>
     <div class="note">
       <b>Called in by hand &mdash; NOT the model.</b> These are spread
-      picks phoned in by friends of the site and added by hand before
-      tipoff. They are graded the same way as the model flags (same
-      morning, same flat $100 stake), but they live in their own record
-      so the line-move model's forward test stays clean. A pick only
-      counts if the line was actually available when it was called
-      &mdash; nothing is added after tipoff.
+      picks and parlays phoned in by friends of the site and added by
+      hand before tipoff. They are graded the same way as the model flags
+      (same morning, same flat $100 stake), but they live in their own
+      record so the line-move model's forward test stays clean. A pick
+      only counts if the line was actually available when it was called
+      &mdash; nothing is added after tipoff, unless a timestamped
+      receipt proves it was placed before tipoff.
     </div>
     <div class="record" id="manual-record-box"></div>
     <div id="manual-current"></div>
@@ -321,6 +322,32 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+// The Pick cell for one manual flag. A single is one line: the side
+// and its spread line. A parlay (type "parlay") shows one line per
+// leg — the side, ML or its spread line, and the matchup — so a
+// reader can tell it is a parlay, not a single.
+function manualPickCell(f) {
+  if (f.type === "parlay" && Array.isArray(f.legs)) {
+    return f.legs.map(l => {
+      const line = (l.line == null) ? " ML" : " " + fmtLine(l.line);
+      return "<b>" + esc(l.side) + line + "</b> (" + esc(l.away) + " vs " + esc(l.home) + ")";
+    }).join("<br>");
+  }
+  return "<b>" + f.side + " " + fmtLine(f.side_line) + "</b>";
+}
+
+// The Game cell for one manual flag. A single is one matchup. A
+// parlay spans games, so it names the parlay: leg count and sport.
+function manualGameCell(f) {
+  if (f.type === "parlay" && Array.isArray(f.legs)) {
+    const sports = f.legs.map(l => l.sport || "").filter(Boolean)
+      .filter((s, i, a) => a.indexOf(s) === i).join(", ");
+    return "<b>" + f.legs.length + "-leg parlay</b>"
+      + (sports ? "<br><span class=\"small\">" + esc(sports) + "</span>" : "");
+  }
+  return f.away + " @ " + f.home;
+}
+
 // Draw the manual-picks section: record line, today's ungraded
 // picks, and the settled history. Mirrors renderWatch, except
 // there is no open line or line move to show — a hand-called pick
@@ -362,8 +389,8 @@ function renderManual() {
       + "<th class=\"num\">Price</th><th>Called by</th><th>Note</th></tr>";
     current.forEach(f => {
       h += "<tr><td>" + f.date + "</td>"
-        + "<td>" + f.away + " @ " + f.home + "</td>"
-        + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+        + "<td>" + manualGameCell(f) + "</td>"
+        + "<td>" + manualPickCell(f) + "</td>"
         + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
         + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
         + "<td>Manual &middot; by " + esc(f.by) + "</td>"
@@ -390,8 +417,8 @@ function renderManual() {
     const resText = f.result === "win" ? "Win" : f.result === "loss" ? "Loss" : "Push";
     const profit = f.profit || 0;
     h += "<tr><td>" + f.date + "</td>"
-      + "<td>" + f.away + " @ " + f.home + "</td>"
-      + "<td><b>" + f.side + " " + fmtLine(f.side_line) + "</b></td>"
+      + "<td>" + manualGameCell(f) + "</td>"
+      + "<td>" + manualPickCell(f) + "</td>"
       + "<td>" + (BOOK_NAMES[f.book] || f.book) + "</td>"
       + "<td class=\"num\">" + fmtPrice(f.price) + "</td>"
       + "<td>Manual &middot; by " + esc(f.by) + "</td>"
