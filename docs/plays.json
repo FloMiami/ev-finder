@@ -1,8 +1,11 @@
 {
   "mode": "live",
-  "updated": "2026-11-12 12:38 UTC",
-  "credits_remaining": 400,
+  "updated": "2026-11-13 14:18 UTC",
+  "credits_remaining": 303,
   "min_edge": 0.03,
   "error": null,
-  "plays": []
+  "plays": [],
+  "arbs": [],
+  "model_props": [],
+  "model_error": null
 }
