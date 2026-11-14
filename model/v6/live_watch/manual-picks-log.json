@@ -9,7 +9,7 @@
       "date": "2026-11-13",
       "event_id": "manual-parlay-20261113-tony-a794e652",
       "flagged_at": "2026-11-13T16:07:13.511320+00:00",
-      "graded_at": null,
+      "graded_at": "2026-11-14T03:09:05.786+00:00",
       "home": "Lorenzo Musetti",
       "legs": [
         {
@@ -35,9 +35,9 @@
       "per_book_move": null,
       "placed_at": "2026-11-13T08:21:06-06:00",
       "price": 138,
-      "profit": null,
+      "profit": 138.0,
       "receipt": "DK639301764648221740",
-      "result": null,
+      "result": "win",
       "score_away": null,
       "score_home": null,
       "side": "Taylor Fritz",
@@ -50,11 +50,11 @@
   ],
   "record": {
     "flags": 1,
-    "graded": 0,
+    "graded": 1,
+    "wins": 1,
     "losses": 0,
-    "profit": 0,
     "pushes": 0,
-    "roi": null,
-    "wins": 0
+    "profit": 138.0,
+    "roi": 138.0
   }
 }
