@@ -51,10 +51,10 @@
   "record": {
     "flags": 1,
     "graded": 1,
-    "wins": 1,
     "losses": 0,
-    "pushes": 0,
     "profit": 138.0,
-    "roi": 138.0
+    "pushes": 0,
+    "roi": 1.38,
+    "wins": 1
   }
 }
