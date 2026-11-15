@@ -1,11 +1,36 @@
 {
   "mode": "live",
-  "updated": "2026-11-14 17:45 UTC",
-  "credits_remaining": 178,
+  "updated": "2026-11-15 11:59 UTC",
+  "credits_remaining": 164,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
-  "arbs": [],
+  "arbs": [
+    {
+      "sport": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "event": "Buffalo Bills @ New York Jets",
+      "commence_time": "2026-11-15T18:00:00Z",
+      "market": "Moneyline",
+      "outcome": "Buffalo Bills",
+      "book": "BetUS",
+      "prices": [
+        -425,
+        451
+      ],
+      "outcome_a": "Buffalo Bills",
+      "book_a": "BetUS",
+      "price_a": -425,
+      "outcome_b": "New York Jets",
+      "book_b": "MyBookie.ag",
+      "price_b": 451,
+      "combined_implied_pct": 99.1,
+      "roi_pct": 0.91,
+      "stake_a": 81.69,
+      "stake_b": 18.31,
+      "guaranteed_profit": 0.91
+    }
+  ],
   "model_props": [],
   "model_error": null
 }
