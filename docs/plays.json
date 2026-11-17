@@ -1,36 +1,11 @@
 {
   "mode": "live",
-  "updated": "2026-11-16 21:44 UTC",
-  "credits_remaining": 100,
+  "updated": "2026-11-17 11:59 UTC",
+  "credits_remaining": 84,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
-  "arbs": [
-    {
-      "sport": "basketball_ncaab",
-      "sport_title": "NCAAB",
-      "event": "Villanova Wildcats @ Pittsburgh Panthers",
-      "commence_time": "2026-11-18T00:00:00Z",
-      "market": "Moneyline",
-      "outcome": "Pittsburgh Panthers",
-      "book": "FanDuel",
-      "prices": [
-        -108,
-        110
-      ],
-      "outcome_a": "Pittsburgh Panthers",
-      "book_a": "FanDuel",
-      "price_a": -108,
-      "outcome_b": "Villanova Wildcats",
-      "book_b": "DraftKings",
-      "price_b": 110,
-      "combined_implied_pct": 99.54,
-      "roi_pct": 0.46,
-      "stake_a": 52.16,
-      "stake_b": 47.84,
-      "guaranteed_profit": 0.46
-    }
-  ],
+  "arbs": [],
   "model_props": [],
   "model_error": null
 }
