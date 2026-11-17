@@ -109,10 +109,65 @@
       "sport": "mma",
       "tipoff": "2026-11-14T17:45:00-05:00",
       "type": "parlay"
+    },
+    {
+      "away": "LAC",
+      "book": "dk",
+      "books_at_threshold": null,
+      "by": "Tony",
+      "credits_remaining_after": null,
+      "date": "2026-11-16",
+      "event_id": "manual-parlay-20261116-tony-cdacb61f",
+      "flagged_at": "2026-11-16T23:59:54.709968+00:00",
+      "graded_at": null,
+      "home": "BAL",
+      "legs": [
+        {
+          "away": "LAC",
+          "home": "BAL",
+          "line": null,
+          "side": "LAC",
+          "sport": "nfl",
+          "tipoff": "2026-11-16T20:15:00-05:00"
+        },
+        {
+          "away": "CHI",
+          "home": "CLE",
+          "line": null,
+          "side": "CLE",
+          "sport": "nba",
+          "tipoff": "2026-11-16T19:10:00-05:00"
+        },
+        {
+          "away": "ORL",
+          "home": "BOS",
+          "line": null,
+          "side": "BOS",
+          "sport": "nba",
+          "tipoff": "2026-11-16T19:10:00-05:00"
+        }
+      ],
+      "median_move": null,
+      "n_books": null,
+      "note": "3-leg ML parlay; combined price +366 computed from leg prices +185/-344/-375 (slip shows no combined price); actual stake not shown on slip (tracked at flat $100)",
+      "per_book_move": null,
+      "placed_at": "2026-11-16T16:55:52-06:00",
+      "price": 366,
+      "profit": null,
+      "receipt": "DK639304665529484312",
+      "result": null,
+      "score_away": null,
+      "score_home": null,
+      "side": "LAC",
+      "side_line": null,
+      "source": "manual",
+      "sport": "nfl",
+      "tipoff": "2026-11-16T19:10:00-05:00",
+      "type": "parlay"
     }
   ],
   "record": {
-    "flags": 2,
+    "flags": 3,
     "graded": 2,
     "losses": 1,
     "profit": 38.0,
