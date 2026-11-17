@@ -119,7 +119,7 @@
       "date": "2026-11-16",
       "event_id": "manual-parlay-20261116-tony-cdacb61f",
       "flagged_at": "2026-11-16T23:59:54.709968+00:00",
-      "graded_at": null,
+      "graded_at": "2026-11-17T12:26:35.996972+00:00",
       "home": "BAL",
       "legs": [
         {
@@ -149,13 +149,13 @@
       ],
       "median_move": null,
       "n_books": null,
-      "note": "3-leg ML parlay; combined price +366 computed from leg prices +185/-344/-375 (slip shows no combined price); actual stake not shown on slip (tracked at flat $100)",
+      "note": "3-leg ML parlay; combined price +366 computed from leg prices +185/-344/-375 (slip shows no combined price); actual stake not shown on slip (tracked at flat $100) | Legs: LAC 23-20 @BAL W, CLE 126-115 vs CHI W, BOS 105-115 vs ORL L \u2014 parlay lost on Boston.",
       "per_book_move": null,
       "placed_at": "2026-11-16T16:55:52-06:00",
       "price": 366,
-      "profit": null,
+      "profit": -100.0,
       "receipt": "DK639304665529484312",
-      "result": null,
+      "result": "loss",
       "score_away": null,
       "score_home": null,
       "side": "LAC",
@@ -168,11 +168,11 @@
   ],
   "record": {
     "flags": 3,
-    "graded": 2,
-    "losses": 1,
-    "profit": 38.0,
+    "graded": 3,
+    "losses": 2,
+    "profit": -62.0,
     "pushes": 0,
-    "roi": 0.19,
+    "roi": -0.2067,
     "wins": 1
   }
 }
