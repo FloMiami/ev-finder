@@ -1,11 +1,108 @@
 {
   "mode": "live",
-  "updated": "2026-11-17 11:59 UTC",
-  "credits_remaining": 84,
+  "updated": "2026-11-17 20:35 UTC",
+  "credits_remaining": 68,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
-  "arbs": [],
+  "arbs": [
+    {
+      "sport": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "event": "New York Giants @ Indianapolis Colts",
+      "commence_time": "2026-11-29T18:00:00Z",
+      "market": "Moneyline",
+      "outcome": "Indianapolis Colts",
+      "book": "BetRivers",
+      "prices": [
+        200,
+        -175
+      ],
+      "outcome_a": "Indianapolis Colts",
+      "book_a": "BetRivers",
+      "price_a": 200,
+      "outcome_b": "New York Giants",
+      "book_b": "DraftKings",
+      "price_b": -175,
+      "combined_implied_pct": 96.97,
+      "roi_pct": 3.12,
+      "stake_a": 34.37,
+      "stake_b": 65.62,
+      "guaranteed_profit": 3.12
+    },
+    {
+      "sport": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "event": "New England Patriots @ Los Angeles Chargers",
+      "commence_time": "2026-11-29T21:05:00Z",
+      "market": "Moneyline",
+      "outcome": "Los Angeles Chargers",
+      "book": "DraftKings",
+      "prices": [
+        -198,
+        210
+      ],
+      "outcome_a": "Los Angeles Chargers",
+      "book_a": "DraftKings",
+      "price_a": -198,
+      "outcome_b": "New England Patriots",
+      "book_b": "FanDuel",
+      "price_b": 210,
+      "combined_implied_pct": 98.7,
+      "roi_pct": 1.32,
+      "stake_a": 67.32,
+      "stake_b": 32.68,
+      "guaranteed_profit": 1.32
+    },
+    {
+      "sport": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "event": "Carolina Panthers @ Tampa Bay Buccaneers",
+      "commence_time": "2026-12-01T01:15:00Z",
+      "market": "Moneyline",
+      "outcome": "Carolina Panthers",
+      "book": "DraftKings",
+      "prices": [
+        124,
+        -121
+      ],
+      "outcome_a": "Carolina Panthers",
+      "book_a": "DraftKings",
+      "price_a": 124,
+      "outcome_b": "Tampa Bay Buccaneers",
+      "book_b": "BetRivers",
+      "price_b": -121,
+      "combined_implied_pct": 99.39,
+      "roi_pct": 0.61,
+      "stake_a": 44.92,
+      "stake_b": 55.08,
+      "guaranteed_profit": 0.61
+    },
+    {
+      "sport": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "event": "Las Vegas Raiders @ Cleveland Browns",
+      "commence_time": "2026-11-30T01:20:00Z",
+      "market": "Moneyline",
+      "outcome": "Cleveland Browns",
+      "book": "DraftKings",
+      "prices": [
+        -185,
+        188
+      ],
+      "outcome_a": "Cleveland Browns",
+      "book_a": "DraftKings",
+      "price_a": -185,
+      "outcome_b": "Las Vegas Raiders",
+      "book_b": "BetRivers",
+      "price_b": 188,
+      "combined_implied_pct": 99.63,
+      "roi_pct": 0.37,
+      "stake_a": 65.15,
+      "stake_b": 34.85,
+      "guaranteed_profit": 0.37
+    }
+  ],
   "model_props": [],
   "model_error": null
 }
