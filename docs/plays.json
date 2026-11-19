@@ -1,36 +1,11 @@
 {
   "mode": "live",
-  "updated": "2026-11-19 11:59 UTC",
-  "credits_remaining": 36,
+  "updated": "2026-11-19 20:08 UTC",
+  "credits_remaining": 27,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
-  "arbs": [
-    {
-      "sport": "basketball_ncaab",
-      "sport_title": "NCAAB",
-      "event": "VCU Rams @ Santa Clara Broncos",
-      "commence_time": "2026-11-20T03:30:00Z",
-      "market": "Moneyline",
-      "outcome": "Santa Clara Broncos",
-      "book": "FanDuel",
-      "prices": [
-        -122,
-        125
-      ],
-      "outcome_a": "Santa Clara Broncos",
-      "book_a": "FanDuel",
-      "price_a": -122,
-      "outcome_b": "VCU Rams",
-      "book_b": "Bovada",
-      "price_b": 125,
-      "combined_implied_pct": 99.4,
-      "roi_pct": 0.6,
-      "stake_a": 55.29,
-      "stake_b": 44.71,
-      "guaranteed_profit": 0.6
-    }
-  ],
+  "arbs": [],
   "model_props": [],
   "model_error": null
 }
