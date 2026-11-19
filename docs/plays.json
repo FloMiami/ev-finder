@@ -1,7 +1,7 @@
 {
   "mode": "live",
-  "updated": "2026-11-18 20:08 UTC",
-  "credits_remaining": 45,
+  "updated": "2026-11-19 11:59 UTC",
+  "credits_remaining": 36,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
@@ -9,26 +9,26 @@
     {
       "sport": "basketball_ncaab",
       "sport_title": "NCAAB",
-      "event": "Rutgers Scarlet Knights @ Notre Dame Fighting Irish",
-      "commence_time": "2026-11-18T19:01:31Z",
+      "event": "VCU Rams @ Santa Clara Broncos",
+      "commence_time": "2026-11-20T03:30:00Z",
       "market": "Moneyline",
-      "outcome": "Notre Dame Fighting Irish",
-      "book": "BetMGM",
+      "outcome": "Santa Clara Broncos",
+      "book": "FanDuel",
       "prices": [
-        -220,
-        230
+        -122,
+        125
       ],
-      "outcome_a": "Notre Dame Fighting Irish",
-      "book_a": "BetMGM",
-      "price_a": -220,
-      "outcome_b": "Rutgers Scarlet Knights",
-      "book_b": "BetRivers",
-      "price_b": 230,
-      "combined_implied_pct": 99.05,
-      "roi_pct": 0.96,
-      "stake_a": 69.41,
-      "stake_b": 30.59,
-      "guaranteed_profit": 0.96
+      "outcome_a": "Santa Clara Broncos",
+      "book_a": "FanDuel",
+      "price_a": -122,
+      "outcome_b": "VCU Rams",
+      "book_b": "Bovada",
+      "price_b": 125,
+      "combined_implied_pct": 99.4,
+      "roi_pct": 0.6,
+      "stake_a": 55.29,
+      "stake_b": 44.71,
+      "guaranteed_profit": 0.6
     }
   ],
   "model_props": [],
