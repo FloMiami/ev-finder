@@ -1,11 +1,36 @@
 {
   "mode": "live",
-  "updated": "2026-11-19 20:08 UTC",
-  "credits_remaining": 27,
+  "updated": "2026-11-20 11:59 UTC",
+  "credits_remaining": 18,
   "min_edge": 0.03,
   "error": null,
   "plays": [],
-  "arbs": [],
+  "arbs": [
+    {
+      "sport": "basketball_ncaab",
+      "sport_title": "NCAAB",
+      "event": "Western Illinois Leathernecks @ Albany Great Danes",
+      "commence_time": "2026-11-20T20:00:00Z",
+      "market": "Moneyline",
+      "outcome": "Albany Great Danes",
+      "book": "DraftKings",
+      "prices": [
+        -258,
+        300
+      ],
+      "outcome_a": "Albany Great Danes",
+      "book_a": "DraftKings",
+      "price_a": -258,
+      "outcome_b": "Western Illinois Leathernecks",
+      "book_b": "Bovada",
+      "price_b": 300,
+      "combined_implied_pct": 97.07,
+      "roi_pct": 3.02,
+      "stake_a": 74.24,
+      "stake_b": 25.76,
+      "guaranteed_profit": 3.02
+    }
+  ],
   "model_props": [],
   "model_error": null
 }
