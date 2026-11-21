@@ -1,60 +1,11 @@
 {
   "mode": "live",
-  "updated": "2026-11-21 11:59 UTC",
-  "credits_remaining": 0,
+  "updated": "2026-11-21 18:49 UTC",
+  "credits_remaining": null,
   "min_edge": 0.03,
-  "error": null,
+  "error": "nba: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american; ncaab: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american; nfl: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american",
   "plays": [],
-  "arbs": [
-    {
-      "sport": "basketball_ncaab",
-      "sport_title": "NCAAB",
-      "event": "Stony Brook Seawolves @ Saint Peter's Peacocks",
-      "commence_time": "2026-11-21T19:00:00Z",
-      "market": "Moneyline",
-      "outcome": "Saint Peter's Peacocks",
-      "book": "BetRivers",
-      "prices": [
-        200,
-        -195
-      ],
-      "outcome_a": "Saint Peter's Peacocks",
-      "book_a": "BetRivers",
-      "price_a": 200,
-      "outcome_b": "Stony Brook Seawolves",
-      "book_b": "BetOnline.ag",
-      "price_b": -195,
-      "combined_implied_pct": 99.44,
-      "roi_pct": 0.57,
-      "stake_a": 33.52,
-      "stake_b": 66.48,
-      "guaranteed_profit": 0.57
-    },
-    {
-      "sport": "basketball_ncaab",
-      "sport_title": "NCAAB",
-      "event": "Presbyterian Blue Hose @ Tennessee Tech Golden Eagles",
-      "commence_time": "2026-11-22T00:30:00Z",
-      "market": "Moneyline",
-      "outcome": "Presbyterian Blue Hose",
-      "book": "BetRivers",
-      "prices": [
-        280,
-        -278
-      ],
-      "outcome_a": "Presbyterian Blue Hose",
-      "book_a": "BetRivers",
-      "price_a": 280,
-      "outcome_b": "Tennessee Tech Golden Eagles",
-      "book_b": "DraftKings",
-      "price_b": -278,
-      "combined_implied_pct": 99.86,
-      "roi_pct": 0.14,
-      "stake_a": 26.35,
-      "stake_b": 73.65,
-      "guaranteed_profit": 0.14
-    }
-  ],
+  "arbs": [],
   "model_props": [],
   "model_error": null
 }
