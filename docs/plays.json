@@ -1,6 +1,6 @@
 {
   "mode": "live",
-  "updated": "2026-11-25 11:59 UTC",
+  "updated": "2026-11-25 21:16 UTC",
   "credits_remaining": null,
   "min_edge": 0.03,
   "error": "nba: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_nba/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american; ncaab: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american; nfl: 401 Client Error: Unauthorized for url: https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds?apiKey=cda9a194d96f283a1fb9f08d54566b2e&regions=us&markets=h2h%2Cspreads%2Ctotals&oddsFormat=american",
